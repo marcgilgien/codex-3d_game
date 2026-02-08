@@ -747,6 +747,55 @@
           "ArrowRight";
         bindTouchButton(btn, key);
       });
+
+      let dragging = false;
+      let activePointerId = null;
+
+      const setDirKeys = (dx, dy) => {
+        const threshold = 12;
+        if (dx < -threshold) keys.add("ArrowLeft"); else keys.delete("ArrowLeft");
+        if (dx > threshold) keys.add("ArrowRight"); else keys.delete("ArrowRight");
+        if (dy < -threshold) keys.add("ArrowUp"); else keys.delete("ArrowUp");
+        if (dy > threshold) keys.add("ArrowDown"); else keys.delete("ArrowDown");
+        ensureAudio();
+      };
+
+      const clearDirKeys = () => {
+        ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].forEach((k) => keys.delete(k));
+      };
+
+      dpadEl.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        dragging = true;
+        activePointerId = e.pointerId;
+        dpadEl.setPointerCapture(e.pointerId);
+        const rect = dpadEl.getBoundingClientRect();
+        const dx = e.clientX - (rect.left + rect.width / 2);
+        const dy = e.clientY - (rect.top + rect.height / 2);
+        setDirKeys(dx, dy);
+      });
+
+      dpadEl.addEventListener("pointermove", (e) => {
+        if (!dragging || e.pointerId !== activePointerId) return;
+        const rect = dpadEl.getBoundingClientRect();
+        const dx = e.clientX - (rect.left + rect.width / 2);
+        const dy = e.clientY - (rect.top + rect.height / 2);
+        setDirKeys(dx, dy);
+      });
+
+      const endDrag = (e) => {
+        if (e.pointerId !== activePointerId) return;
+        dragging = false;
+        activePointerId = null;
+        clearDirKeys();
+      };
+
+      dpadEl.addEventListener("pointerup", endDrag);
+      dpadEl.addEventListener("pointercancel", endDrag);
+      dpadEl.addEventListener("pointerleave", (e) => {
+        if (!dragging) return;
+        endDrag(e);
+      });
     }
 
     document.querySelectorAll(".touch-btn").forEach((btn) => {
