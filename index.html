@@ -535,7 +535,7 @@
         const dz = monster.z - player.z;
         const dist = Math.hypot(dx, dz);
         if (dist < monster.r + player.size / 2) {
-          endGame(false);
+          endGame(false, "monster");
           return;
         }
       }
@@ -605,13 +605,17 @@
       requestAnimationFrame(loop);
     }
 
-    function endGame(win) {
+    function endGame(win, reason = "time") {
       running = false;
       statusEl.textContent = "PRESS ENTER";
       overlayEl.classList.remove("hidden");
-      messageEl.textContent = win
-        ? "YOU WIN! 50 FRUITS!"
-        : "TIME UP! TRY AGAIN";
+      if (win) {
+        messageEl.textContent = "YOU WIN! 50 FRUITS!";
+      } else if (reason === "monster") {
+        messageEl.textContent = "YOU HIT A MONSTER!";
+      } else {
+        messageEl.textContent = "TIME UP! TRY AGAIN";
+      }
       stopMusic();
       if (win) {
         playWinSound();
