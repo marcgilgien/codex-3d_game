@@ -302,7 +302,7 @@
     const fruits = [];
     const FRUIT_COUNT = 14;
     const monsters = [];
-    const MONSTER_COUNT = 6;
+    const MONSTER_COUNT = 3;
     const camera = { x: 0, z: 0 };
     const renderState = {
       scale: 1,
@@ -360,7 +360,7 @@
       return {
         x: player.x + (Math.random() - 0.5) * spawnRadiusX * 2,
         z: player.z + 80 + Math.random() * spawnDepth,
-        r: 20 + Math.random() * 8,
+        r: 24 + Math.random() * 10,
         color: ["#6b1fff", "#ff2f6d", "#33d1ff"][Math.floor(Math.random() * 3)],
         eye: "#f7ff00",
       };
@@ -486,17 +486,24 @@
         const p = project(monster.x, monster.z);
         if (p.z < 10) continue;
         const r = monster.r * p.scale;
+        const w = r * 1.6;
+        const h = r * 1.1;
+        const blink = Math.sin(performance.now() * 0.012 + monster.x * 0.02 + monster.z * 0.01) > 0.2;
+
         ctx.fillStyle = monster.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y - r * 0.3, r, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillRect(p.x - w / 2, p.y - h * 0.6, w, h);
 
         ctx.fillStyle = monster.eye;
-        ctx.fillRect(p.x - r * 0.45, p.y - r * 0.5, r * 0.25, r * 0.2);
-        ctx.fillRect(p.x + r * 0.2, p.y - r * 0.5, r * 0.25, r * 0.2);
+        if (blink) {
+          ctx.fillRect(p.x - w * 0.3, p.y - h * 0.35, w * 0.18, h * 0.18);
+          ctx.fillRect(p.x + w * 0.12, p.y - h * 0.35, w * 0.18, h * 0.18);
+        } else {
+          ctx.fillRect(p.x - w * 0.32, p.y - h * 0.28, w * 0.22, h * 0.06);
+          ctx.fillRect(p.x + w * 0.1, p.y - h * 0.28, w * 0.22, h * 0.06);
+        }
 
         ctx.fillStyle = "#0b0f14";
-        ctx.fillRect(p.x - r * 0.3, p.y - r * 0.1, r * 0.6, r * 0.12);
+        ctx.fillRect(p.x - w * 0.25, p.y + h * 0.05, w * 0.5, h * 0.12);
       }
     }
 
