@@ -135,12 +135,12 @@
         </div>
       </div>
       <div class="hud">
-        <div class="pill" id="fruitCount">FRUITS: 0 / 30</div>
+        <div class="pill" id="fruitCount">FRUITS: 0 / 60</div>
         <div class="center" id="timer">TIME: 30.0</div>
         <div class="pill" id="status">PRESS ENTER TO START</div>
       </div>
       <div class="help">
-        Use arrow keys to run. Collect 30 fruits within 30 seconds.
+        Use arrow keys to run. Collect 60 fruits within 30 seconds.
       </div>
     </div>
   </div>
@@ -157,22 +157,24 @@
 
     const VIEW = { width: 1280, height: 720, horizon: 220 };
     const WORLD = { width: 520, depth: 1100 };
+    const CAMERA_FOLLOW_Z = 120;
     const FOV = 720;
 
-    const TARGET_FRUITS = 30;
+    const TARGET_FRUITS = 60;
     const GAME_TIME = 30;
 
     const player = {
       x: 0,
       z: 140,
       size: 45,
-      speed: 180,
+      speed: 360,
       vx: 0,
       vz: 0,
     };
 
     const fruits = [];
     const FRUIT_COUNT = 14;
+    const camera = { x: 0, z: 0 };
 
     let collected = 0;
     let timeLeft = GAME_TIME;
@@ -203,9 +205,11 @@
     }
 
     function spawnFruit() {
+      const spawnRadiusX = WORLD.width * 0.6;
+      const spawnDepth = WORLD.depth * 0.6;
       return {
-        x: (Math.random() - 0.5) * WORLD.width,
-        z: 60 + Math.random() * (WORLD.depth - 80),
+        x: player.x + (Math.random() - 0.5) * spawnRadiusX * 2,
+        z: player.z + 60 + Math.random() * spawnDepth,
         r: 16 + Math.random() * 7,
         color: ["#ff3b3b", "#ff9f1c", "#b7ff5a", "#ff4fd8"][Math.floor(Math.random() * 4)],
       };
@@ -217,11 +221,15 @@
     }
 
     function project(x, z) {
-      const scale = FOV / (FOV + z);
+      const relX = x - camera.x;
+      const relZ = z - camera.z;
+      const safeZ = Math.max(10, relZ);
+      const scale = FOV / (FOV + safeZ);
       return {
-        x: VIEW.width / 2 + x * scale,
-        y: VIEW.horizon + z * scale,
+        x: VIEW.width / 2 + relX * scale,
+        y: VIEW.horizon + safeZ * scale,
         scale,
+        z: relZ,
       };
     }
 
@@ -247,9 +255,9 @@
       ctx.strokeStyle = "rgba(0,0,0,0.18)";
       ctx.lineWidth = 2;
       for (let i = 0; i < 18; i++) {
-        const z = (i / 18) * WORLD.depth;
-        const p1 = project(-WORLD.width / 2, z);
-        const p2 = project(WORLD.width / 2, z);
+        const z = camera.z + (i / 18) * WORLD.depth;
+        const p1 = project(camera.x - WORLD.width / 2, z);
+        const p2 = project(camera.x + WORLD.width / 2, z);
         ctx.beginPath();
         ctx.moveTo(p1.x, p1.y);
         ctx.lineTo(p2.x, p2.y);
@@ -259,10 +267,10 @@
       // lane lines
       ctx.strokeStyle = "rgba(255,255,255,0.15)";
       for (let i = -2; i <= 2; i++) {
-        const x = (i / 2) * (WORLD.width / 2);
+        const x = camera.x + (i / 2) * (WORLD.width / 2);
         ctx.beginPath();
-        const near = project(x, 0);
-        const far = project(x, WORLD.depth);
+        const near = project(x, camera.z);
+        const far = project(x, camera.z + WORLD.depth);
         ctx.moveTo(near.x, near.y);
         ctx.lineTo(far.x, far.y);
         ctx.stroke();
@@ -306,9 +314,10 @@
     }
 
     function drawFruits() {
-      const sorted = [...fruits].sort((a, b) => a.z - b.z);
+      const sorted = [...fruits].sort((a, b) => (a.z - camera.z) - (b.z - camera.z));
       for (const fruit of sorted) {
         const p = project(fruit.x, fruit.z);
+        if (p.z < 10) continue;
         const r = fruit.r * p.scale;
         ctx.fillStyle = fruit.color;
         ctx.beginPath();
@@ -337,9 +346,8 @@
       player.x += player.vx * dt;
       player.z += player.vz * dt;
 
-      const padding = 20;
-      player.x = Math.max(-WORLD.width / 2 + padding, Math.min(WORLD.width / 2 - padding, player.x));
-      player.z = Math.max(20, Math.min(WORLD.depth - 40, player.z));
+      camera.x = player.x;
+      camera.z = player.z - CAMERA_FOLLOW_Z;
     }
 
     function checkCollisions() {
@@ -375,6 +383,15 @@
       updatePlayer(dt);
       checkCollisions();
 
+      for (let i = fruits.length - 1; i >= 0; i--) {
+        const fruit = fruits[i];
+        if (fruit.z < camera.z - 40 || fruit.z > camera.z + WORLD.depth + 120 ||
+            Math.abs(fruit.x - camera.x) > WORLD.width) {
+          fruits.splice(i, 1);
+          fruits.push(spawnFruit());
+        }
+      }
+
       if (collected >= TARGET_FRUITS) {
         endGame(true);
       }
@@ -403,9 +420,14 @@
       statusEl.textContent = "PRESS ENTER";
       overlayEl.classList.remove("hidden");
       messageEl.textContent = win
-        ? "YOU WIN! 30 FRUITS!"
+        ? "YOU WIN! 60 FRUITS!"
         : "TIME UP! TRY AGAIN";
       stopMusic();
+      if (win) {
+        playWinSound();
+      } else {
+        playLoseSound();
+      }
     }
 
     function ensureAudio() {
@@ -430,6 +452,37 @@
       osc.connect(gain).connect(audioCtx.destination);
       osc.start(now);
       osc.stop(now + 0.12);
+    }
+
+    function playWinSound() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
+      osc.frequency.exponentialRampToValueAtTime(1320, now + 0.4);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.5);
+    }
+
+    function playLoseSound() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(220, now + 0.35);
+      gain.gain.setValueAtTime(0.07, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.4);
     }
 
     function playNote(freq, duration, type, gainValue) {
