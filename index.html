@@ -223,12 +223,12 @@
         </div>
       </div>
       <div class="hud">
-        <div class="pill" id="fruitCount">FRUITS: 0 / 60</div>
+        <div class="pill" id="fruitCount">FRUITS: 0 / 50</div>
         <div class="center" id="timer">TIME: 30.0</div>
         <div class="pill" id="status">PRESS ENTER TO START</div>
       </div>
       <div class="help">
-        Use arrow keys to run. Collect 60 fruits within 30 seconds.
+        Use arrow keys to run. Collect 50 fruits within 30 seconds.
       </div>
       <div class="touch-ui" aria-hidden="false">
         <div class="dpad" id="dpad">
@@ -274,7 +274,7 @@
     const CAMERA_FOLLOW_Z = 120;
     const FOV = 720;
 
-    const TARGET_FRUITS = 60;
+    const TARGET_FRUITS = 50;
     const GAME_TIME = 30;
 
     const player = {
@@ -544,7 +544,7 @@
       statusEl.textContent = "PRESS ENTER";
       overlayEl.classList.remove("hidden");
       messageEl.textContent = win
-        ? "YOU WIN! 60 FRUITS!"
+        ? "YOU WIN! 50 FRUITS!"
         : "TIME UP! TRY AGAIN";
       stopMusic();
       if (win) {
