@@ -128,6 +128,29 @@
       aspect-ratio: 16 / 9;
     }
 
+    .touch-zone {
+      position: absolute;
+      right: 16px;
+      bottom: 16px;
+      width: 170px;
+      height: 170px;
+      border: 2px solid rgba(65, 243, 255, 0.6);
+      border-radius: 16px;
+      background: rgba(15, 26, 40, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+    }
+
+    .touch-zone svg {
+      width: 18px;
+      height: 18px;
+      display: block;
+      margin: 0 auto;
+      fill: var(--text);
+    }
+
     #game {
       width: 100%;
       height: 100%;
@@ -216,18 +239,16 @@
         aspect-ratio: auto;
       }
       .touch-ui {
-        display: grid;
-        justify-items: center;
+        display: none;
+      }
+      .touch-zone {
+        display: flex;
       }
       .dpad {
-        background: rgba(15, 26, 40, 0.55);
-        border: 2px solid rgba(65, 243, 255, 0.5);
-        border-radius: 16px;
-        padding: 10px;
         grid-template-columns: repeat(3, 28px);
         grid-template-rows: repeat(3, 28px);
         gap: 4px;
-        max-width: 160px;
+        max-width: 150px;
         justify-content: center;
       }
       .touch-btn {
@@ -235,7 +256,7 @@
         border-color: transparent;
       }
       .touch-btn svg {
-        opacity: 0;
+        opacity: 1;
       }
     }
   </style>
@@ -249,6 +270,27 @@
         <div class="overlay" id="overlay">
           <div class="message" id="message"></div>
         </div>
+        <div class="touch-zone" id="touchZone" aria-hidden="true">
+          <div class="dpad" id="dpad">
+            <div></div>
+            <div class="touch-btn" data-dir="up" role="button" aria-label="Up">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4l8 10h-5v6H9v-6H4z"/></svg>
+            </div>
+            <div></div>
+            <div class="touch-btn" data-dir="left" role="button" aria-label="Left">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l10-8v5h6v6h-6v5z"/></svg>
+            </div>
+            <div class="touch-btn" data-dir="down" role="button" aria-label="Down">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20l-8-10h5V4h6v6h5z"/></svg>
+            </div>
+            <div class="touch-btn" data-dir="right" role="button" aria-label="Right">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12l-10 8v-5H4V9h6V4z"/></svg>
+            </div>
+            <div></div>
+            <div></div>
+            <div></div>
+          </div>
+        </div>
       </div>
       <div class="hud">
         <div class="pill" id="fruitCount">FRUITS: 0 / 50</div>
@@ -259,25 +301,6 @@
         Use arrow keys to run. Collect 50 fruits within 30 seconds.
       </div>
       <div class="touch-ui" aria-hidden="false">
-        <div class="dpad" id="dpad">
-          <div></div>
-          <div class="touch-btn" data-dir="up" role="button" aria-label="Up">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4l8 10h-5v6H9v-6H4z"/></svg>
-          </div>
-          <div></div>
-          <div class="touch-btn" data-dir="left" role="button" aria-label="Left">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l10-8v5h6v6h-6v5z"/></svg>
-          </div>
-          <div class="touch-btn" data-dir="down" role="button" aria-label="Down">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20l-8-10h5V4h6v6h5z"/></svg>
-          </div>
-          <div class="touch-btn" data-dir="right" role="button" aria-label="Right">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12l-10 8v-5H4V9h6V4z"/></svg>
-          </div>
-          <div></div>
-          <div></div>
-          <div></div>
-        </div>
         <button class="touch-btn touch-start" id="touchStart" type="button" aria-label="Start">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l12 7-12 7z"/></svg>
         </button>
