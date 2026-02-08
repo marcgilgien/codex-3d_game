@@ -208,10 +208,12 @@
     @media (pointer: coarse) {
       .screen {
         width: min(1280px, 92vw);
-        aspect-ratio: 16 / 6.5;
+        height: 70vh;
+        aspect-ratio: auto;
       }
       .touch-ui {
         display: grid;
+        justify-items: center;
       }
       .dpad {
         background: rgba(15, 26, 40, 0.55);
@@ -222,6 +224,7 @@
         grid-template-rows: repeat(3, 28px);
         gap: 4px;
         max-width: 160px;
+        justify-content: center;
       }
       .touch-btn {
         background: transparent;
