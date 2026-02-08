@@ -301,6 +301,8 @@
 
     const fruits = [];
     const FRUIT_COUNT = 14;
+    const monsters = [];
+    const MONSTER_COUNT = 6;
     const camera = { x: 0, z: 0 };
     const renderState = {
       scale: 1,
@@ -327,8 +329,12 @@
       timeLeft = GAME_TIME;
       musicHectic = false;
       fruits.length = 0;
+      monsters.length = 0;
       for (let i = 0; i < FRUIT_COUNT; i++) {
         fruits.push(spawnFruit());
+      }
+      for (let i = 0; i < MONSTER_COUNT; i++) {
+        monsters.push(spawnMonster());
       }
       updateHUD();
       statusEl.textContent = "RUN!";
@@ -345,6 +351,18 @@
         z: player.z + 60 + Math.random() * spawnDepth,
         r: 16 + Math.random() * 7,
         color: ["#ff3b3b", "#ff9f1c", "#b7ff5a", "#ff4fd8"][Math.floor(Math.random() * 4)],
+      };
+    }
+
+    function spawnMonster() {
+      const spawnRadiusX = WORLD.width * 0.7;
+      const spawnDepth = WORLD.depth * 0.7;
+      return {
+        x: player.x + (Math.random() - 0.5) * spawnRadiusX * 2,
+        z: player.z + 80 + Math.random() * spawnDepth,
+        r: 20 + Math.random() * 8,
+        color: ["#6b1fff", "#ff2f6d", "#33d1ff"][Math.floor(Math.random() * 3)],
+        eye: "#f7ff00",
       };
     }
 
@@ -462,6 +480,26 @@
       }
     }
 
+    function drawMonsters() {
+      const sorted = [...monsters].sort((a, b) => (a.z - camera.z) - (b.z - camera.z));
+      for (const monster of sorted) {
+        const p = project(monster.x, monster.z);
+        if (p.z < 10) continue;
+        const r = monster.r * p.scale;
+        ctx.fillStyle = monster.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y - r * 0.3, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = monster.eye;
+        ctx.fillRect(p.x - r * 0.45, p.y - r * 0.5, r * 0.25, r * 0.2);
+        ctx.fillRect(p.x + r * 0.2, p.y - r * 0.5, r * 0.25, r * 0.2);
+
+        ctx.fillStyle = "#0b0f14";
+        ctx.fillRect(p.x - r * 0.3, p.y - r * 0.1, r * 0.6, r * 0.12);
+      }
+    }
+
     function updatePlayer(dt) {
       player.vx = 0;
       player.vz = 0;
@@ -496,6 +534,17 @@
           playEatSound();
         }
       }
+
+      for (let i = 0; i < monsters.length; i++) {
+        const monster = monsters[i];
+        const dx = monster.x - player.x;
+        const dz = monster.z - player.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist < monster.r + player.size / 2) {
+          endGame(false);
+          return;
+        }
+      }
     }
 
     function update(dt) {
@@ -525,6 +574,15 @@
         }
       }
 
+      for (let i = monsters.length - 1; i >= 0; i--) {
+        const monster = monsters[i];
+        if (monster.z < camera.z - 60 || monster.z > camera.z + WORLD.depth + 140 ||
+            Math.abs(monster.x - camera.x) > WORLD.width) {
+          monsters.splice(i, 1);
+          monsters.push(spawnMonster());
+        }
+      }
+
       if (collected >= TARGET_FRUITS) {
         endGame(true);
       }
@@ -538,6 +596,7 @@
       ctx.setTransform(renderState.scale, 0, 0, renderState.scale, renderState.offsetX, renderState.offsetY);
       drawBackground();
       drawFruits();
+      drawMonsters();
       drawPlayer();
     }
 
