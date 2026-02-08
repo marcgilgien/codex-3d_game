@@ -141,19 +141,23 @@
     .touch-ui {
       margin-top: 14px;
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       gap: 16px;
       align-items: center;
       font-size: 10px;
+      justify-items: end;
+      width: 100%;
     }
 
     .dpad {
       display: grid;
-      grid-template-columns: repeat(3, 48px);
-      grid-template-rows: repeat(3, 48px);
+      grid-template-columns: repeat(3, 72px);
+      grid-template-rows: repeat(3, 72px);
       gap: 8px;
-      justify-content: center;
+      justify-content: end;
       align-content: center;
+      width: 100%;
+      max-width: 420px;
     }
 
     .touch-btn {
