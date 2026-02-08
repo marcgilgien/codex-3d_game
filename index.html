@@ -115,12 +115,65 @@
 
     .screen {
       position: relative;
-      width: 1280px;
-      height: 720px;
+      width: min(1280px, 92vw);
+      aspect-ratio: 16 / 9;
     }
 
-    @media (max-width: 720px) {
-      .screen { width: 90vw; height: 50.625vw; }
+    #game {
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .touch-ui {
+      display: none;
+    }
+
+    .touch-ui {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: center;
+      font-size: 10px;
+    }
+
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 48px);
+      grid-template-rows: repeat(3, 48px);
+      gap: 8px;
+      justify-content: center;
+      align-content: center;
+    }
+
+    .touch-btn {
+      border: 2px solid var(--neon-cyan);
+      background: rgba(65, 243, 255, 0.12);
+      color: var(--text);
+      font-family: "Press Start 2P", monospace;
+      font-size: 9px;
+      padding: 8px;
+      text-align: center;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .touch-btn:active {
+      background: rgba(255, 79, 216, 0.2);
+      border-color: var(--neon-pink);
+    }
+
+    .touch-start {
+      justify-self: end;
+      padding: 12px 14px;
+      font-size: 9px;
+    }
+
+    @media (pointer: coarse) {
+      .touch-ui {
+        display: grid;
+      }
     }
   </style>
 </head>
@@ -142,6 +195,20 @@
       <div class="help">
         Use arrow keys to run. Collect 60 fruits within 30 seconds.
       </div>
+      <div class="touch-ui" aria-hidden="false">
+        <div class="dpad" id="dpad">
+          <div></div>
+          <div class="touch-btn" data-dir="up">UP</div>
+          <div></div>
+          <div class="touch-btn" data-dir="left">LEFT</div>
+          <div class="touch-btn" data-dir="down">DOWN</div>
+          <div class="touch-btn" data-dir="right">RIGHT</div>
+          <div></div>
+          <div></div>
+          <div></div>
+        </div>
+        <button class="touch-btn touch-start" id="touchStart" type="button">START</button>
+      </div>
     </div>
   </div>
 
@@ -154,6 +221,8 @@
     const statusEl = document.getElementById("status");
     const overlayEl = document.getElementById("overlay");
     const messageEl = document.getElementById("message");
+    const dpadEl = document.getElementById("dpad");
+    const touchStartEl = document.getElementById("touchStart");
 
     const VIEW = { width: 1280, height: 720, horizon: 220 };
     const WORLD = { width: 520, depth: 1100 };
@@ -412,6 +481,7 @@
 
       update(dt);
       draw();
+      resizeCanvas();
       requestAnimationFrame(loop);
     }
 
@@ -436,6 +506,19 @@
       }
       if (audioCtx.state === "suspended") {
         audioCtx.resume();
+      }
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.floor(rect.width);
+      const height = Math.floor(rect.height);
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+        VIEW.width = width;
+        VIEW.height = height;
+        VIEW.horizon = Math.round(height * 0.3);
       }
     }
 
@@ -542,10 +625,7 @@
       }
 
       if (e.key === "Enter") {
-        ensureAudio();
-        running = true;
-        resetGame();
-        lastTime = performance.now();
+        startGame();
         return;
       }
 
@@ -559,9 +639,63 @@
       keys.delete(e.key);
     });
 
+    function startGame() {
+      ensureAudio();
+      running = true;
+      resetGame();
+      lastTime = performance.now();
+    }
+
+    canvas.addEventListener("pointerdown", () => {
+      if (!running) startGame();
+    });
+
+    overlayEl.addEventListener("pointerdown", () => {
+      if (!running) startGame();
+    });
+
+    touchStartEl.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      if (!running) startGame();
+    });
+
+    function bindTouchButton(el, key) {
+      const setKey = (down) => {
+        if (down) {
+          keys.add(key);
+          ensureAudio();
+        } else {
+          keys.delete(key);
+        }
+      };
+      el.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        setKey(true);
+      });
+      el.addEventListener("pointerup", (e) => {
+        e.preventDefault();
+        setKey(false);
+      });
+      el.addEventListener("pointercancel", () => setKey(false));
+      el.addEventListener("pointerleave", () => setKey(false));
+    }
+
+    if (dpadEl) {
+      dpadEl.querySelectorAll("[data-dir]").forEach((btn) => {
+        const dir = btn.getAttribute("data-dir");
+        const key =
+          dir === "up" ? "ArrowUp" :
+          dir === "down" ? "ArrowDown" :
+          dir === "left" ? "ArrowLeft" :
+          "ArrowRight";
+        bindTouchButton(btn, key);
+      });
+    }
+
     overlayEl.classList.remove("hidden");
     messageEl.textContent = "PRESS ENTER TO START";
 
+    resizeCanvas();
     requestAnimationFrame(loop);
   </script>
 </body>
