@@ -385,22 +385,9 @@
     }
 
     function drawBackground() {
-      ctx.fillStyle = "#0c1220";
-      ctx.fillRect(0, 0, VIEW.width, VIEW.height);
-
       const horizon = VIEW.horizon;
-      ctx.fillStyle = "#152033";
-      ctx.fillRect(0, 0, VIEW.width, horizon + 6);
-
-      // ground
       ctx.fillStyle = "#1e9b3f";
-      ctx.beginPath();
-      ctx.moveTo(0, horizon + 6);
-      ctx.lineTo(VIEW.width, horizon + 6);
-      ctx.lineTo(VIEW.width, VIEW.height);
-      ctx.lineTo(0, VIEW.height);
-      ctx.closePath();
-      ctx.fill();
+      ctx.fillRect(0, 0, VIEW.width, VIEW.height);
 
       // perspective stripes
       ctx.strokeStyle = "rgba(0,0,0,0.18)";
