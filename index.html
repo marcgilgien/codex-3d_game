@@ -157,7 +157,7 @@
 
     const WORLD = { width: 640, height: 360 };
     const TARGET_FRUITS = 30;
-    const GAME_TIME = 60;
+    const GAME_TIME = 30;
 
     const player = {
       x: 320,
@@ -177,12 +177,17 @@
     let lastTime = 0;
 
     const keys = new Set();
+    let audioCtx = null;
+    let musicInterval = null;
+    let musicStep = 0;
+    let musicHectic = false;
 
     function resetGame() {
       player.x = 320;
       player.y = 180;
       collected = 0;
       timeLeft = GAME_TIME;
+      musicHectic = false;
       fruits.length = 0;
       for (let i = 0; i < FRUIT_COUNT; i++) {
         fruits.push(spawnFruit());
@@ -191,6 +196,7 @@
       statusEl.textContent = "RUN!";
       overlayEl.classList.add("hidden");
       messageEl.textContent = "";
+      startMusic();
     }
 
     function spawnFruit() {
@@ -300,6 +306,7 @@
           fruits.splice(i, 1);
           collected += 1;
           fruits.push(spawnFruit());
+          playEatSound();
         }
       }
     }
@@ -312,6 +319,11 @@
         timeLeft = 0;
         endGame(false);
         return;
+      }
+
+      if (!musicHectic && timeLeft <= 10) {
+        musicHectic = true;
+        startMusic();
       }
 
       updatePlayer(dt);
@@ -347,6 +359,82 @@
       messageEl.textContent = win
         ? "YOU WIN! 30 FRUITS!"
         : "TIME UP! TRY AGAIN";
+      stopMusic();
+    }
+
+    function ensureAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+    }
+
+    function playEatSound() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.08);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    }
+
+    function playNote(freq, duration, type, gainValue) {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(gainValue, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + duration);
+    }
+
+    function startMusic() {
+      stopMusic();
+      if (!audioCtx) return;
+      musicStep = 0;
+      const mellowTempo = 220;
+      const hecticTempo = 120;
+      const interval = musicHectic ? hecticTempo : mellowTempo;
+      const melodyMellow = [392, 440, 392, 349, 330, 349, 392, 440];
+      const melodyHectic = [523, 587, 659, 587, 523, 494, 523, 494];
+      const bassMellow = [131, 147, 165, 147];
+      const bassHectic = [165, 196, 220, 196];
+
+      musicInterval = setInterval(() => {
+        const melody = musicHectic ? melodyHectic : melodyMellow;
+        const bass = musicHectic ? bassHectic : bassMellow;
+        const step = musicStep % melody.length;
+        const bassStep = musicStep % bass.length;
+
+        playNote(melody[step], musicHectic ? 0.18 : 0.28, "triangle", 0.04);
+        if (musicStep % 2 === 0) {
+          playNote(bass[bassStep], musicHectic ? 0.22 : 0.3, "square", 0.03);
+        }
+        if (musicHectic && musicStep % 2 === 1) {
+          playNote(880, 0.06, "square", 0.015);
+        }
+
+        musicStep += 1;
+      }, interval);
+    }
+
+    function stopMusic() {
+      if (musicInterval) {
+        clearInterval(musicInterval);
+        musicInterval = null;
+      }
     }
 
     window.addEventListener("keydown", (e) => {
@@ -355,12 +443,16 @@
       }
 
       if (e.key === "Enter") {
+        ensureAudio();
         running = true;
         resetGame();
         lastTime = performance.now();
         return;
       }
 
+      if (e.key.startsWith("Arrow")) {
+        ensureAudio();
+      }
       keys.add(e.key);
     });
 
