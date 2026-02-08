@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Retro Fruit Dash</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --neon-pink: #ff4fd8;
+      --neon-cyan: #41f3ff;
+      --neon-yellow: #f7ff00;
+      --lawn: #1e9b3f;
+      --lawn-dark: #13732e;
+      --text: #e9f5ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: radial-gradient(1200px 800px at 50% 20%, #1a2330 0%, #0b0f14 60%, #07090c 100%);
+      color: var(--text);
+      font-family: "Press Start 2P", monospace;
+    }
+
+    .wrap {
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+
+    .frame {
+      padding: 16px;
+      border: 4px solid var(--neon-cyan);
+      box-shadow: 0 0 20px rgba(65, 243, 255, 0.4), inset 0 0 16px rgba(65, 243, 255, 0.3);
+      background: linear-gradient(180deg, rgba(12,16,22,0.9), rgba(6,8,12,0.95));
+    }
+
+    .title {
+      font-size: 14px;
+      text-align: center;
+      margin: 0 0 12px;
+      color: var(--neon-pink);
+      text-shadow: 0 0 8px rgba(255, 79, 216, 0.6);
+    }
+
+    canvas {
+      display: block;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(255,255,255,0.04) 0px,
+        rgba(255,255,255,0.04) 1px,
+        rgba(0,0,0,0) 2px,
+        rgba(0,0,0,0) 4px
+      );
+      image-rendering: pixelated;
+      border: 4px solid var(--neon-pink);
+      box-shadow: 0 0 18px rgba(255, 79, 216, 0.5);
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 12px;
+      align-items: center;
+      margin-top: 12px;
+      font-size: 10px;
+    }
+
+    .hud .center {
+      text-align: center;
+      color: var(--neon-yellow);
+      text-shadow: 0 0 8px rgba(247, 255, 0, 0.6);
+    }
+
+    .pill {
+      padding: 6px 8px;
+      border: 2px solid var(--neon-cyan);
+      background: rgba(65, 243, 255, 0.08);
+    }
+
+    .help {
+      margin-top: 10px;
+      font-size: 9px;
+      color: #9bb3c7;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+    }
+
+    .message {
+      background: rgba(6, 8, 12, 0.92);
+      border: 3px solid var(--neon-yellow);
+      padding: 16px 18px;
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.5;
+      box-shadow: 0 0 18px rgba(247, 255, 0, 0.4);
+    }
+
+    .hidden { display: none; }
+
+    .screen {
+      position: relative;
+      width: 640px;
+      height: 360px;
+    }
+
+    @media (max-width: 720px) {
+      .screen { width: 90vw; height: 50.625vw; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="frame">
+      <h1 class="title">RETRO FRUIT DASH</h1>
+      <div class="screen">
+        <canvas id="game" width="640" height="360"></canvas>
+        <div class="overlay" id="overlay">
+          <div class="message" id="message"></div>
+        </div>
+      </div>
+      <div class="hud">
+        <div class="pill" id="fruitCount">FRUITS: 0 / 100</div>
+        <div class="center" id="timer">TIME: 60.0</div>
+        <div class="pill" id="status">PRESS ENTER TO START</div>
+      </div>
+      <div class="help">
+        Use arrow keys to run. Collect 100 fruits within one minute.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const fruitCountEl = document.getElementById("fruitCount");
+    const timerEl = document.getElementById("timer");
+    const statusEl = document.getElementById("status");
+    const overlayEl = document.getElementById("overlay");
+    const messageEl = document.getElementById("message");
+
+    const WORLD = { width: 640, height: 360 };
+    const TARGET_FRUITS = 30;
+    const GAME_TIME = 60;
+
+    const player = {
+      x: 320,
+      y: 180,
+      size: 20,
+      speed: 150,
+      vx: 0,
+      vy: 0,
+    };
+
+    const fruits = [];
+    const FRUIT_COUNT = 12;
+
+    let collected = 0;
+    let timeLeft = GAME_TIME;
+    let running = false;
+    let lastTime = 0;
+
+    const keys = new Set();
+
+    function resetGame() {
+      player.x = 320;
+      player.y = 180;
+      collected = 0;
+      timeLeft = GAME_TIME;
+      fruits.length = 0;
+      for (let i = 0; i < FRUIT_COUNT; i++) {
+        fruits.push(spawnFruit());
+      }
+      updateHUD();
+      statusEl.textContent = "RUN!";
+      overlayEl.classList.add("hidden");
+      messageEl.textContent = "";
+    }
+
+    function spawnFruit() {
+      return {
+        x: 20 + Math.random() * (WORLD.width - 40),
+        y: 20 + Math.random() * (WORLD.height - 40),
+        r: 6 + Math.random() * 4,
+        color: ["#ff3b3b", "#ff9f1c", "#b7ff5a", "#ff4fd8"][Math.floor(Math.random() * 4)],
+      };
+    }
+
+    function updateHUD() {
+      fruitCountEl.textContent = `FRUITS: ${collected} / ${TARGET_FRUITS}`;
+      timerEl.textContent = `TIME: ${timeLeft.toFixed(1)}`;
+    }
+
+    function drawBackground() {
+      ctx.fillStyle = "#1e9b3f";
+      ctx.fillRect(0, 0, WORLD.width, WORLD.height);
+
+      ctx.fillStyle = "#13732e";
+      for (let i = 0; i < WORLD.width; i += 32) {
+        ctx.fillRect(i, 0, 6, WORLD.height);
+      }
+
+      ctx.fillStyle = "rgba(0,0,0,0.15)";
+      for (let i = 0; i < WORLD.height; i += 24) {
+        ctx.fillRect(0, i, WORLD.width, 2);
+      }
+    }
+
+    function drawPlayer() {
+      const { x, y, size } = player;
+
+      // shadow
+      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      ctx.fillRect(x - size / 2 + 2, y + size / 2 - 2, size, 6);
+
+      // body
+      ctx.fillStyle = "#59b8ff";
+      ctx.fillRect(x - size / 2, y - size / 2, size, size);
+
+      // face
+      ctx.fillStyle = "#ffd6a6";
+      ctx.fillRect(x - 6, y - 8, 12, 10);
+
+      // eyes
+      ctx.fillStyle = "#2b1a14";
+      ctx.fillRect(x - 4, y - 5, 2, 2);
+      ctx.fillRect(x + 2, y - 5, 2, 2);
+
+      // blonde hair
+      ctx.fillStyle = "#ffe066";
+      ctx.fillRect(x - 8, y - 14, 16, 6);
+
+      // ponytails
+      ctx.fillRect(x - 14, y - 10, 6, 8);
+      ctx.fillRect(x + 8, y - 10, 6, 8);
+
+      // boots
+      ctx.fillStyle = "#f3ff6a";
+      ctx.fillRect(x - 8, y + 6, 6, 4);
+      ctx.fillRect(x + 2, y + 6, 6, 4);
+    }
+
+    function drawFruits() {
+      for (const fruit of fruits) {
+        ctx.fillStyle = fruit.color;
+        ctx.beginPath();
+        ctx.arc(fruit.x, fruit.y, fruit.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#3a2f0b";
+        ctx.fillRect(fruit.x - 1, fruit.y - fruit.r - 3, 2, 3);
+      }
+    }
+
+    function updatePlayer(dt) {
+      player.vx = 0;
+      player.vy = 0;
+
+      if (keys.has("ArrowLeft")) player.vx -= player.speed;
+      if (keys.has("ArrowRight")) player.vx += player.speed;
+      if (keys.has("ArrowUp")) player.vy -= player.speed;
+      if (keys.has("ArrowDown")) player.vy += player.speed;
+
+      if (player.vx !== 0 && player.vy !== 0) {
+        player.vx *= 0.7;
+        player.vy *= 0.7;
+      }
+
+      player.x += player.vx * dt;
+      player.y += player.vy * dt;
+
+      const padding = player.size / 2;
+      player.x = Math.max(padding, Math.min(WORLD.width - padding, player.x));
+      player.y = Math.max(padding, Math.min(WORLD.height - padding, player.y));
+    }
+
+    function checkCollisions() {
+      for (let i = fruits.length - 1; i >= 0; i--) {
+        const fruit = fruits[i];
+        const dx = fruit.x - player.x;
+        const dy = fruit.y - player.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < fruit.r + player.size / 2) {
+          fruits.splice(i, 1);
+          collected += 1;
+          fruits.push(spawnFruit());
+        }
+      }
+    }
+
+    function update(dt) {
+      if (!running) return;
+
+      timeLeft -= dt;
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        endGame(false);
+        return;
+      }
+
+      updatePlayer(dt);
+      checkCollisions();
+
+      if (collected >= TARGET_FRUITS) {
+        endGame(true);
+      }
+
+      updateHUD();
+    }
+
+    function draw() {
+      drawBackground();
+      drawFruits();
+      drawPlayer();
+    }
+
+    function loop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const dt = Math.min(0.033, (timestamp - lastTime) / 1000);
+      lastTime = timestamp;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    function endGame(win) {
+      running = false;
+      statusEl.textContent = "PRESS ENTER";
+      overlayEl.classList.remove("hidden");
+      messageEl.textContent = win
+        ? "YOU WIN! 30 FRUITS!"
+        : "TIME UP! TRY AGAIN";
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)) {
+        e.preventDefault();
+      }
+
+      if (e.key === "Enter") {
+        running = true;
+        resetGame();
+        lastTime = performance.now();
+        return;
+      }
+
+      keys.add(e.key);
+    });
+
+    window.addEventListener("keyup", (e) => {
+      keys.delete(e.key);
+    });
+
+    overlayEl.classList.remove("hidden");
+    messageEl.textContent = "PRESS ENTER TO START";
+
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
