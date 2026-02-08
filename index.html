@@ -321,6 +321,7 @@
       offsetY: 0,
       dpr: 1,
     };
+    const isCoarsePointer = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
 
     let collected = 0;
     let timeLeft = GAME_TIME;
@@ -653,7 +654,9 @@
         canvas.width = width;
         canvas.height = height;
       }
-      const scale = Math.min(rect.width / VIEW.width, rect.height / VIEW.height);
+      const scale = isCoarsePointer
+        ? Math.max(rect.width / VIEW.width, rect.height / VIEW.height)
+        : Math.min(rect.width / VIEW.width, rect.height / VIEW.height);
       renderState.dpr = dpr;
       renderState.scale = scale * dpr;
       renderState.offsetX = (canvas.width - VIEW.width * renderState.scale) / 2;
